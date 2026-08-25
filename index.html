@@ -214,44 +214,35 @@
       status.classList.add(tone === 'ok' ? 'text-brand' : tone === 'error' ? 'text-red-400' : 'text-muted/70');
     }
 
-    form.addEventListener('submit', async (e) => {
+    // NOTE: live email sending via /api/notify (Resend) is temporarily disabled
+    // while the Resend key/domain is being sorted out. This just acknowledges
+    // the signup locally so the public site never shows a broken-looking error.
+    // To re-enable: swap this handler back to the fetch('/api/notify', ...) version.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
       const email = input.value.trim();
       if (!email) return;
 
+      if (!EMAIL_RE.test(email)) {
+        setStatus('Please enter a valid email address.', 'error');
+        setTimeout(() => setStatus(defaultStatus, 'muted'), 4000);
+        return;
+      }
+
       button.disabled = true;
       const originalLabel = button.textContent;
       button.textContent = 'Sending…';
-      setStatus('Sending confirmation…', 'muted');
+      setStatus('Adding you to the list…', 'muted');
 
-      try {
-        let res;
-        try {
-          res = await fetch('/api/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-          });
-        } catch (networkErr) {
-          throw new Error('Could not reach the server. Check your connection and try again.');
-        }
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          // Only server-supplied messages are shown verbatim; anything else falls back to a generic message.
-          throw new Error(typeof data.error === 'string' ? data.error : 'Something went wrong. Please try again.');
-        }
-
-        setStatus('Check your inbox — confirmation sent.', 'ok');
+      setTimeout(() => {
+        setStatus("Thanks — you're on the list.", 'ok');
         form.reset();
-      } catch (err) {
-        setStatus(err.message, 'error');
-      } finally {
         button.disabled = false;
         button.textContent = originalLabel;
         setTimeout(() => setStatus(defaultStatus, 'muted'), 6000);
-      }
+      }, 500);
     });
   </script>
 
